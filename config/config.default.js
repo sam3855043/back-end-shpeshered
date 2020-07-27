@@ -27,7 +27,14 @@ module.exports = appInfo => {
       dir: `${appInfo.root}/log`,
     },
   };
-
+  exports.security = {
+    csrf: false,
+    ctoken: false,
+  };
+  exports.validate = {
+    enable: true,
+    package: 'egg-validate',
+  };
   config.mongoose = {
     clients: {
       user: {

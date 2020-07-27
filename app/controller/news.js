@@ -33,6 +33,34 @@ class NewsController extends Controller {
       res,
     };
   }
+  async addSherphered() {
+    const { ctx, service } = this;
+    const { newuser, randomuser } = await service.mongo.addShereped();
+    ctx.body = {
+      msg: 'add!',
+      list: newuser,
+      randomuser,
+    };
+  }
+  async findSherphered() {
+    const { ctx, service } = this;
+    const { result } = await service.mongo.findSherered();
+    console.log('result1', result);
+    ctx.body = {
+      msg: 'add!',
+      data: result,
+    };
+  }
+  async getRandomuser() {
+    const { ctx, service } = this;
+    const res = await service.mongo.getRandomuser();
+    ctx.body = {
+      msg: 'success',
+      len: res.length,
+      res,
+    };
+
+  }
 }
 
 module.exports = NewsController;

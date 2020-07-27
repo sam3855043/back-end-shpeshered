@@ -4,7 +4,7 @@
 const Service = require('egg').Service;
 const Mock = require('mockjs');
 const Random = Mock.Random;
-
+const jwt = require('jsonwebtoken');
 function initUserData(roster) {}
 class MongoService extends Service {
   async obtain() {
@@ -15,7 +15,160 @@ class MongoService extends Service {
       return [];
     }
   }
+  /**
+   * Sherphered Service
+   */
+  async insertBulk() {
+    try {
+      // const result = await this.ctx.model.memberData.insertMany([{}])
+      // console.log('this.ctx.query', this.ctx.request.body);
+      const memberData = this.ctx.request.body.members.map(function(item) {
+        return { Name: item.member_name, ID: item.member_id, path: item.path, sex: item.sex };
+      });
+      // console.log('memberData', memberData);
+      const result = await this.ctx.model.MemberData.insertMany(memberData);
+      // console.log('bulkMemberData', result);
+      return { result };
+    } catch (error) {
+      console.log('error insertBulk', error);
+      return [];
+    }
+  }
+  // sign In Sherphered 
+  async findSherphered() {
+    try {
+      // find sherphered one 1.name(account) 2.password
+      let msg;
+      let token;
+      const data = await this.ctx.model.Sherphered.find({ account: this.ctx.query.account, password: this.ctx.query.password });
+      if (data.length === 0) {
+        msg = 'no account';
+      }
+      else {
+        msg = 'success';
+        // token = jwt.sign({
+        //   data: 'foobar'
+        // }, 'secret', { expiresIn: 60 * 60 });
+        token = this.ctx.app.jwt.sign( this.ctx.request.query, this.app.config.jwt.secret, { expiresIn: '1h' });
+        //  token签名 有效期为1小时
+      }
+      return { msg, data, token };
+    } catch (error) {
+      console.log('error1', error);
+      return [];
+    }
+  }
 
+  async addShereped() {
+    console.log('ctx', this.ctx.query);
+    const user = new this.ctx.model.Sherphered({
+      address: '',
+      zip: '',
+      city: '',
+      gender: '',
+      ShepherdPhone: '',
+      country: '',
+      ShepherdID: '',
+      ChildrenInfo: [{}],
+      email: '',
+      phone: '',
+      account: this.ctx.query.account,
+      password: this.ctx.query.password,
+      Name: this.ctx.query.user,
+      ID: this.ctx.query.id,
+    });
+    try {
+      const res = await user.save();
+      console.log('res', res);
+      if (res && res._id) {
+        return {
+          newuser: res,
+          randomuser: this.ctx.query.user,
+        };
+      }
+      return [];
+    } catch (error) {
+      console.log('error1', error);
+      return [];
+    }
+  }
+  async modifySherphered() {
+    const data = await this.ctx.model.UserModel.find({ Name: this.ctx.query.user });
+    const tmp = data.ShepherdInfo;
+    tmp.push({
+      name: this.ctx.query.beSherephedName,
+      ID: this.ctx.query.beSherephedID,
+      _id: this.ctx.query.beSherephed_id,
+    });
+    // tmp.push(this.ctx.query.ShepherdName);
+    // tmp1.push(this.ctx.query.ShepherdID);
+    const ReturnData = await this.ctx.model.UserModel.update({ Name: this.ctx.query.user }, {
+      $set: {
+        SherepherdInfo: tmp
+      }
+    });
+    console.log(ReturnData);
+    return { ReturnData };
+  }
+  async getBeSherpheredList() {
+    console.log('getBeSherpheredList');
+    // let decode = this.ctx.app.jwt.verify(token, options.secret);
+    console.log('this.app.config.jwt', this.app.config.jwt);
+    const token = this.ctx.request.header.authorization;
+    let decode = this.ctx.app.jwt.verify(token, this.app.config.jwt);
+    console.log('decode', decode);
+    const list = this.ctx.model.BeShephered.find({ SherpheredInfo: { $elemMatch: { account: decode.account } } });
+    //const list = this.ctx.model.BeShephered.find();                               
+    // console.log('list1', list);
+    return list;
+  }
+  async addBeSherphered() {
+    const BeSherphered = new this.ctx.model.BeShephered({
+      address: '',
+      zip: '',
+      city: '',
+      gender: '',
+      ShepherdPhone: '',
+      country: '',
+      ShepherdID: '',
+      SherpheredInfo: [{ account: this.ctx.query.sherpheredAccount, Name: this.ctx.query.sherpheredName, ID: this.ctx.query.sherpheredID, _id: this.ctx.query.sherphered_id }],
+      email: '',
+      phone: '',
+      title: '',
+      Name: this.ctx.query.beSherpheredName,
+      ID: this.ctx.query.beSherpheredNameID,
+    });
+    try {
+      const res = await BeSherphered.save();
+      if (res && res._id) {
+        return {
+          BeSherphered: res,
+        };
+      }
+      return { BeSherphered };
+    } catch (error) {
+      return [];
+    }
+
+  }
+  async modifyBeSherphered() {
+    const data = await this.ctx.model.UserModel.find({ Name: this.ctx.query.user });
+    const tmp = data.ShepherdInfo;
+    tmp.push({
+      name: this.ctx.query.beSherephedName,
+      ID: this.ctx.query.beSherephedID,
+      _id: this.ctx.query.beSherephed_id,
+    });
+    // tmp.push(this.ctx.query.ShepherdName);
+    // tmp1.push(this.ctx.query.ShepherdID);
+    const ReturnData = await this.ctx.model.UserModel.update({ Name: this.ctx.query.user }, {
+      $set: {
+        SherepherdInfo: tmp
+      }
+    });
+    console.log(ReturnData);
+    return { ReturnData };
+  }
   async getRandomuser() {
     const api = this.config.userDataInterface;
     //  Services call each other
